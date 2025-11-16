@@ -94,16 +94,14 @@ public class PlayerController : MonoBehaviour
     {
         if (!isAttacking && _movementInput != Vector2.zero)
         {
-            bool sucess = TryToMove(_movementInput);
+            bool success = TryToMove(_movementInput);
 
-            if (!sucess && _movementInput.x > 0)
+            if (!success)
             {
-                sucess = TryToMove(new Vector2(_movementInput.x, 0));
-            }
+                success = TryToMove(new Vector2(_movementInput.x, 0));
 
-            if (!sucess && _movementInput.y > 0)
-            {
-                sucess = TryToMove(new Vector2(0, _movementInput.y));
+                if (!success)
+                    success = TryToMove(new Vector2(0, _movementInput.y));
             }
 
             animator.SetBool(IS_WALKING, _movementInput.magnitude > 0.1f);
@@ -125,22 +123,25 @@ public class PlayerController : MonoBehaviour
 
     bool TryToMove(Vector2 direction)
     {
+        if (direction == Vector2.zero)
+            return false;
+
+        float distance = _movementSpeed * Time.fixedDeltaTime + collisionOffset;
+
         int count = _rb.Cast(
             direction,
             contactFilter,
             castCollisions,
-            _movementSpeed * Time.fixedDeltaTime + collisionOffset
+            distance
         );
 
         if (count == 0)
         {
-            _rb.MovePosition(_rb.position + _movementSpeed * Time.fixedDeltaTime * _movementInput);
+            _rb.MovePosition(_rb.position + direction.normalized * _movementSpeed * Time.fixedDeltaTime);
             return true;
         }
-        else
-        {
-            return false;
-        }
+
+        return false;
     }
 
     void Flip()
@@ -170,11 +171,10 @@ public class PlayerController : MonoBehaviour
         if (distance > attackRange)
             return;
 
-        // Direction to enemy for 8-direction attack
         Vector2 dir = (enemy.position - transform.position).normalized;
 
-        animator.SetFloat("AttackX", dir.x);
-        animator.SetFloat("AttackY", dir.y);
+        animator.SetFloat(ATTACK_X, dir.x);
+        animator.SetFloat(ATTACK_Y, dir.y);
 
         StartAttack(enemy.gameObject);
     }
