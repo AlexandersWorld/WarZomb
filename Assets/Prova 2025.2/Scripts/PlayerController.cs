@@ -13,19 +13,25 @@ public class PlayerController : MonoBehaviour
     private const string ATTACK_Y = "AttackY";
     private const string IS_ATTACKING = "isAttacking";
     private const string MOVE_MAGNITUDE = "MoveMagnitude";
+    private const string LAST_MOVE_X = "LastMoveX";
+    private const string LAST_MOVE_Y = "LastMoveY";
 
     [SerializeField] float attackRange = 2f;
     [SerializeField] int attackDamage = 10;
     [SerializeField] private float _movementSpeed = 233f;
     [SerializeField] float collisionOffset = 0.05f;
+    [SerializeField] float attackCooldown = 0.4f;
     [SerializeField] ContactFilter2D contactFilter;
 
+
+    private bool isAttacking = false;
+    private float attackTimer = 0f;
     private Vector2 _movementInput;
     private Rigidbody2D _rb;
     private Camera cam;
     private Animator animator;
     private Vector2 lastMoveDir;
-    private bool facingRight = true;
+    private bool facingLeft = true;
     private SpriteRenderer spriteRenderer;
 
     List<RaycastHit2D> castCollisions = new List<RaycastHit2D>();
@@ -42,27 +48,51 @@ public class PlayerController : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
-    // Update is called once per frame
     void Update()
     {
-        _movementInput.Set(InputManager.Movement.x, InputManager.Movement.y);
+        _movementInput = InputManager.Movement;
+
+        HandleAnimation(_movementInput);
+
+        if (_movementInput.sqrMagnitude > 0.01f)
+        {
+            lastMoveDir = _movementInput.normalized;
+        }
+
+        if (isAttacking)
+        {
+            attackTimer -= Time.deltaTime;
+            if (attackTimer <= 0f)
+            {
+                isAttacking = false;
+                animator.SetBool("isAttacking", false);
+            }
+        }
+
+        if (Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            TryAttack();
+        }
+
+        Flip();
+    }
+
+
+    private void HandleAnimation(Vector2 _movementInput)
+    {
 
         animator.SetFloat(MOVE_X, _movementInput.x);
         animator.SetFloat(MOVE_Y, _movementInput.y);
 
         animator.SetFloat(MOVE_MAGNITUDE, _movementInput.magnitude);
 
-        _rb.velocity = _movementInput * _movementSpeed * Time.deltaTime;
-
-        if (Mouse.current.leftButton.wasPressedThisFrame)
-        {
-            HandleMouseClick();
-        }
+        animator.SetFloat(LAST_MOVE_X, lastMoveDir.x);
+        animator.SetFloat(LAST_MOVE_Y, lastMoveDir.y);
     }
 
     private void FixedUpdate()
     {
-        if (_movementInput != Vector2.zero)
+        if (!isAttacking && _movementInput != Vector2.zero)
         {
             bool sucess = TryToMove(_movementInput);
 
@@ -113,29 +143,50 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void HandleMouseClick()
+    void Flip()
     {
+        if (_movementInput.x < 0 && !facingLeft || _movementInput.x > 0 && facingLeft)
+        {
+            Vector3 scale = transform.localScale;
+            scale.x *= -1;
+            transform.localScale = scale;
+            facingLeft = !facingLeft;
+        }
+    }
+
+    void TryAttack()
+    {
+        if (isAttacking) return;
+
         Ray ray = cam.ScreenPointToRay(Input.mousePosition);
         RaycastHit2D hit = Physics2D.Raycast(ray.origin, ray.direction);
 
-        if (hit.collider != null && hit.collider.CompareTag("Enemy"))
-        {
-            
-            Transform enemyTransform = hit.collider.transform;
+        if (hit.collider == null || !hit.collider.CompareTag("Enemy"))
+            return;
 
-            float distance = Vector2.Distance(transform.position, enemyTransform.position);
+        Transform enemy = hit.collider.transform;
 
-            if (distance <= attackRange)
-            {
-                animator.SetBool(IS_ATTACKING, true);
+        float distance = Vector2.Distance(transform.position, enemy.position);
+        if (distance > attackRange)
+            return;
 
-                Vector2 dir = (enemyTransform.position - transform.position).normalized;
-                animator.SetFloat(ATTACK_X, dir.x);
-                animator.SetFloat(ATTACK_Y, dir.y);
+        // Direction to enemy for 8-direction attack
+        Vector2 dir = (enemy.position - transform.position).normalized;
 
-                ApplyDamage(enemyTransform.gameObject);
-            }
-        }
+        animator.SetFloat("AttackX", dir.x);
+        animator.SetFloat("AttackY", dir.y);
+
+        StartAttack(enemy.gameObject);
+    }
+
+    void StartAttack(GameObject enemy)
+    {
+        isAttacking = true;
+        attackTimer = attackCooldown;
+
+        animator.SetBool(IS_ATTACKING, true);
+
+        ApplyDamage(enemy);
     }
 
     void ApplyDamage(GameObject enemyGameObject)
@@ -146,9 +197,5 @@ public class PlayerController : MonoBehaviour
         {
             enemyHealth.TakeDamage(attackDamage);
         }
-    }
-    public void ResetAttack()
-    {
-        animator.SetBool(IS_ATTACKING, false);
     }
 } 
