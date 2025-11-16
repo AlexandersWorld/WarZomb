@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 7762856125820285181}
   - component: {fileID: 5732628099178029562}
   - component: {fileID: 3846198194139358180}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Zombie_Regular
   m_TagString: Enemy
   m_Icon: {fileID: 0}
@@ -183,3 +183,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c029aa9461b950409f3ab76a076ff65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  moveSpeed: 0.5
+  attackRange: 0.1
+  attackCooldown: 1
