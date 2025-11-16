@@ -170,11 +170,10 @@ public class PlayerController : MonoBehaviour
         if (distance > attackRange)
             return;
 
-        // Direction to enemy for 8-direction attack
         Vector2 dir = (enemy.position - transform.position).normalized;
 
-        animator.SetFloat("AttackX", dir.x);
-        animator.SetFloat("AttackY", dir.y);
+        animator.SetFloat(ATTACK_X, dir.x);
+        animator.SetFloat(ATTACK_Y, dir.y);
 
         StartAttack(enemy.gameObject);
     }
