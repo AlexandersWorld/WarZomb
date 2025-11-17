@@ -19,9 +19,9 @@ public class PlayerController : MonoBehaviour
     private const string LAST_MOVE_Y = "LastMoveY";
     private const string IS_SUPER = "isSuper";
 
-    [SerializeField] float attackRange = 2f;
+    [SerializeField] float attackRange = .5f;
     [SerializeField] int attackDamage = 10;
-    [SerializeField] private float _movementSpeed = 3f;
+    [SerializeField] private float movementSpeed = 1.8f;
     [SerializeField] float collisionOffset = 0.05f;
     [SerializeField] float attackCooldown = 0.4f;
     [SerializeField] TextMeshProUGUI killCountText;
@@ -114,6 +114,8 @@ public class PlayerController : MonoBehaviour
 
         xpSlider.value = 0;
         attackDamage = 30;
+        attackRange = 1f;
+        movementSpeed = 1.2f;
 
         Debug.Log("TRANSFORMED!");
         animator.SetBool(IS_SUPER, true);
@@ -123,6 +125,8 @@ public class PlayerController : MonoBehaviour
     {
         isTransformed = false;
         attackDamage = 10;
+        attackRange = 0.5f;
+        movementSpeed = 1.8f;
 
         Debug.Log("BACK TO NORMAL!");
         animator.SetBool(IS_SUPER, false);
@@ -176,7 +180,7 @@ public class PlayerController : MonoBehaviour
         if (direction == Vector2.zero)
             return false;
 
-        float distance = _movementSpeed * Time.fixedDeltaTime + collisionOffset;
+        float distance = movementSpeed * Time.fixedDeltaTime + collisionOffset;
 
         int count = _rb.Cast(
             direction,
@@ -187,7 +191,7 @@ public class PlayerController : MonoBehaviour
 
         if (count == 0)
         {
-            _rb.MovePosition(_rb.position + direction.normalized * _movementSpeed * Time.fixedDeltaTime);
+            _rb.MovePosition(_rb.position + direction.normalized * movementSpeed * Time.fixedDeltaTime);
             return true;
         }
 
