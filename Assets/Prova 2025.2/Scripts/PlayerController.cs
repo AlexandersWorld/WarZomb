@@ -25,8 +25,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] float collisionOffset = 0.05f;
     [SerializeField] float attackCooldown = 0.4f;
     [SerializeField] TextMeshProUGUI killCountText;
-    [SerializeField] private float killXP = 10f;
-    [SerializeField] Slider xpSlider;
+    [SerializeField] private float killReward = 10f;
+    [SerializeField] Slider staminaSlider;
+    [SerializeField] float staminaDrainRate = 5f;
     [SerializeField] ContactFilter2D contactFilter;
 
 
@@ -58,7 +59,8 @@ public class PlayerController : MonoBehaviour
         animator = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         killCountText.text = killCount.ToString();
-        xpSlider.maxValue = 100;
+        staminaSlider.maxValue = 100;
+        staminaSlider.value = 0;
     }
 
     void Update()
@@ -93,18 +95,20 @@ public class PlayerController : MonoBehaviour
 
         if (isTransformed)
         {
-            transformTimer -= Time.deltaTime;
+            staminaSlider.value -= staminaDrainRate * Time.deltaTime;
 
-            if (transformTimer <= 0)
+            if (staminaSlider.value <= 0)
             {
+                staminaSlider.value = 0;
                 EndTransformation();
             }
         }
 
-        if (!isTransformed && xpSlider.value >= 100)
+        if (staminaSlider.value >= 100 && !isTransformed)
         {
             StartTransformation();
         }
+
     }
 
     void StartTransformation()
@@ -112,7 +116,6 @@ public class PlayerController : MonoBehaviour
         isTransformed = true;
         transformTimer = transformDuration;
 
-        xpSlider.value = 0;
         attackDamage = 30;
         attackRange = 1f;
         movementSpeed = 1.2f;
@@ -254,8 +257,17 @@ public class PlayerController : MonoBehaviour
             {
                 killCount++;
 
-                if (!isTransformed)
-                    xpSlider.value += killXP;
+                staminaSlider.value += killReward;
+
+                if (!isTransformed && staminaSlider.value >= 100)
+                {
+                    StartTransformation();
+                }
+
+                if (isTransformed)
+                {
+                    staminaSlider.value = Mathf.Clamp(staminaSlider.value, 0, 100);
+                }
             }
         }
     }
