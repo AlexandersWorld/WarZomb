@@ -19,14 +19,15 @@ public class PlayerController : MonoBehaviour
     private const string LAST_MOVE_Y = "LastMoveY";
     private const string IS_SUPER = "isSuper";
 
-    [SerializeField] float attackRange = 2f;
+    [SerializeField] float attackRange = .5f;
     [SerializeField] int attackDamage = 10;
-    [SerializeField] private float _movementSpeed = 3f;
+    [SerializeField] private float movementSpeed = 1.8f;
     [SerializeField] float collisionOffset = 0.05f;
     [SerializeField] float attackCooldown = 0.4f;
     [SerializeField] TextMeshProUGUI killCountText;
-    [SerializeField] private float killXP = 10f;
-    [SerializeField] Slider xpSlider;
+    [SerializeField] private float killReward = 10f;
+    [SerializeField] Slider staminaSlider;
+    [SerializeField] float staminaDrainRate = 5f;
     [SerializeField] ContactFilter2D contactFilter;
 
 
@@ -58,7 +59,8 @@ public class PlayerController : MonoBehaviour
         animator = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         killCountText.text = killCount.ToString();
-        xpSlider.maxValue = 100;
+        staminaSlider.maxValue = 100;
+        staminaSlider.value = 0;
     }
 
     void Update()
@@ -93,18 +95,20 @@ public class PlayerController : MonoBehaviour
 
         if (isTransformed)
         {
-            transformTimer -= Time.deltaTime;
+            staminaSlider.value -= staminaDrainRate * Time.deltaTime;
 
-            if (transformTimer <= 0)
+            if (staminaSlider.value <= 0)
             {
+                staminaSlider.value = 0;
                 EndTransformation();
             }
         }
 
-        if (!isTransformed && xpSlider.value >= 100)
+        if (staminaSlider.value >= 100 && !isTransformed)
         {
             StartTransformation();
         }
+
     }
 
     void StartTransformation()
@@ -112,8 +116,9 @@ public class PlayerController : MonoBehaviour
         isTransformed = true;
         transformTimer = transformDuration;
 
-        xpSlider.value = 0;
         attackDamage = 30;
+        attackRange = 1f;
+        movementSpeed = 1.2f;
 
         Debug.Log("TRANSFORMED!");
         animator.SetBool(IS_SUPER, true);
@@ -123,6 +128,8 @@ public class PlayerController : MonoBehaviour
     {
         isTransformed = false;
         attackDamage = 10;
+        attackRange = 0.5f;
+        movementSpeed = 1.8f;
 
         Debug.Log("BACK TO NORMAL!");
         animator.SetBool(IS_SUPER, false);
@@ -176,7 +183,7 @@ public class PlayerController : MonoBehaviour
         if (direction == Vector2.zero)
             return false;
 
-        float distance = _movementSpeed * Time.fixedDeltaTime + collisionOffset;
+        float distance = movementSpeed * Time.fixedDeltaTime + collisionOffset;
 
         int count = _rb.Cast(
             direction,
@@ -187,7 +194,7 @@ public class PlayerController : MonoBehaviour
 
         if (count == 0)
         {
-            _rb.MovePosition(_rb.position + direction.normalized * _movementSpeed * Time.fixedDeltaTime);
+            _rb.MovePosition(_rb.position + direction.normalized * movementSpeed * Time.fixedDeltaTime);
             return true;
         }
 
@@ -250,8 +257,17 @@ public class PlayerController : MonoBehaviour
             {
                 killCount++;
 
-                if (!isTransformed)
-                    xpSlider.value += killXP;
+                staminaSlider.value += killReward;
+
+                if (!isTransformed && staminaSlider.value >= 100)
+                {
+                    StartTransformation();
+                }
+
+                if (isTransformed)
+                {
+                    staminaSlider.value = Mathf.Clamp(staminaSlider.value, 0, 100);
+                }
             }
         }
     }
