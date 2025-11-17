@@ -13,6 +13,8 @@ public class EnemyController : MonoBehaviour
     [SerializeField] float moveSpeed = 3f;
     [SerializeField] float attackRange = 1.5f;
     [SerializeField] float attackCooldown = 1f;
+    [SerializeField] int attackDamage = 2;
+
     private float lastAttackTime;
 
     private bool isDying = false;
@@ -124,7 +126,7 @@ public class EnemyController : MonoBehaviour
 
         if (GetDistanceToTarget() <= attackRange + 0.2f)
         {
-            target.GetComponent<HealthBar>().TakeDamage(1);
+            target.GetComponent<HealthBar>().TakeDamage(attackDamage);
         }
     }
 }

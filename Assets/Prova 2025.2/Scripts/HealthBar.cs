@@ -2,24 +2,33 @@ using UnityEngine;
 
 public class HealthBar : MonoBehaviour
 {
-    public int maxHealth = 30;
-    private int health;
+    public int maxHealth = 100;
+    private int currentHealth;
+    [SerializeField] private HealthBarCanvas healthBar;
 
     private bool isDead = false;
 
     private void Start()
     {
-        health = maxHealth;
+        currentHealth = maxHealth;
+        if (healthBar)
+        {
+            healthBar.SetMaxHealth(maxHealth);
+        }
     }
 
     public void TakeDamage(int amount)
     {
         if (isDead) return;
 
-        health -= amount;
-        Debug.Log($"{gameObject.name} took {amount} damage. HP: {health}");
+        currentHealth -= amount;
 
-        if (health <= 0)
+        if (healthBar)
+        {
+            healthBar.SetHealth(currentHealth);
+        }
+
+        if (currentHealth <= 0)
         {
             isDead = true;
         }

@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
@@ -15,12 +17,16 @@ public class PlayerController : MonoBehaviour
     private const string MOVE_MAGNITUDE = "MoveMagnitude";
     private const string LAST_MOVE_X = "LastMoveX";
     private const string LAST_MOVE_Y = "LastMoveY";
+    private const string IS_SUPER = "isSuper";
 
     [SerializeField] float attackRange = 2f;
     [SerializeField] int attackDamage = 10;
-    [SerializeField] private float _movementSpeed = 233f;
+    [SerializeField] private float _movementSpeed = 3f;
     [SerializeField] float collisionOffset = 0.05f;
     [SerializeField] float attackCooldown = 0.4f;
+    [SerializeField] TextMeshProUGUI killCountText;
+    [SerializeField] private float killXP = 10f;
+    [SerializeField] Slider xpSlider;
     [SerializeField] ContactFilter2D contactFilter;
 
 
@@ -33,6 +39,11 @@ public class PlayerController : MonoBehaviour
     private Vector2 lastMoveDir;
     private bool facingLeft = true;
     private SpriteRenderer spriteRenderer;
+    private int killCount = 0;
+
+    private bool isTransformed = false;
+    private float transformDuration = 30f;
+    private float transformTimer = 0f;
 
     List<RaycastHit2D> castCollisions = new List<RaycastHit2D>();
 
@@ -46,10 +57,14 @@ public class PlayerController : MonoBehaviour
         cam = Camera.main;
         animator = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+        killCountText.text = killCount.ToString();
+        xpSlider.maxValue = 100;
     }
 
     void Update()
     {
+        killCountText.text = killCount.ToString();
+
         _movementInput = InputManager.Movement;
 
         HandleAnimation(_movementInput);
@@ -65,7 +80,7 @@ public class PlayerController : MonoBehaviour
             if (attackTimer <= 0f)
             {
                 isAttacking = false;
-                animator.SetBool("isAttacking", false);
+                animator.SetBool(IS_ATTACKING, false);
             }
         }
 
@@ -75,8 +90,43 @@ public class PlayerController : MonoBehaviour
         }
 
         Flip();
+
+        if (isTransformed)
+        {
+            transformTimer -= Time.deltaTime;
+
+            if (transformTimer <= 0)
+            {
+                EndTransformation();
+            }
+        }
+
+        if (!isTransformed && xpSlider.value >= 100)
+        {
+            StartTransformation();
+        }
     }
 
+    void StartTransformation()
+    {
+        isTransformed = true;
+        transformTimer = transformDuration;
+
+        xpSlider.value = 0;
+        attackDamage = 30;
+
+        Debug.Log("TRANSFORMED!");
+        animator.SetBool(IS_SUPER, true);
+    }
+
+    void EndTransformation()
+    {
+        isTransformed = false;
+        attackDamage = 10;
+
+        Debug.Log("BACK TO NORMAL!");
+        animator.SetBool(IS_SUPER, false);
+    }
 
     private void HandleAnimation(Vector2 _movementInput)
     {
@@ -159,16 +209,15 @@ public class PlayerController : MonoBehaviour
     {
         if (isAttacking) return;
 
-        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-        RaycastHit2D hit = Physics2D.Raycast(ray.origin, ray.direction);
+        Vector2 mousePos = cam.ScreenToWorldPoint(Input.mousePosition);
+        RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
 
         if (hit.collider == null || !hit.collider.CompareTag("Enemy"))
             return;
 
         Transform enemy = hit.collider.transform;
 
-        float distance = Vector2.Distance(transform.position, enemy.position);
-        if (distance > attackRange)
+        if (!InRange(enemy.gameObject))
             return;
 
         Vector2 dir = (enemy.position - transform.position).normalized;
@@ -193,9 +242,24 @@ public class PlayerController : MonoBehaviour
     {
         HealthBar enemyHealth = enemyGameObject.GetComponent<HealthBar>();
 
-        if (enemyHealth != null)
+        if (enemyHealth != null && InRange(enemyGameObject))
         {
             enemyHealth.TakeDamage(attackDamage);
+
+            if (enemyHealth.IsEmpty())
+            {
+                killCount++;
+
+                if (!isTransformed)
+                    xpSlider.value += killXP;
+            }
         }
+    }
+
+    bool InRange(GameObject enemy)
+    {
+        float distance = Vector2.Distance(transform.position, enemy.transform.position);
+
+        return distance < attackRange;
     }
 } 
